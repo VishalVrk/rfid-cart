@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getDefaultPaymentAccount } from '@/services/paymentService';
 
 interface GooglePayButtonProps {
   className?: string;
@@ -11,10 +13,29 @@ interface GooglePayButtonProps {
 
 const GooglePayButton: React.FC<GooglePayButtonProps> = ({ 
   className,
-  recipientUpi = "vishalvrk97@okhdfcbank" 
+  recipientUpi
 }) => {
   const { totalPrice, clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
+  const [defaultUpi, setDefaultUpi] = useState(recipientUpi || "vishalvrk97@okhdfcbank");
+  
+  // Fetch default UPI ID if not provided
+  useEffect(() => {
+    if (!recipientUpi) {
+      const fetchDefaultAccount = async () => {
+        try {
+          const defaultAccount = await getDefaultPaymentAccount();
+          if (defaultAccount) {
+            setDefaultUpi(defaultAccount.upiId);
+          }
+        } catch (error) {
+          console.error("Error fetching default payment account:", error);
+        }
+      };
+      
+      fetchDefaultAccount();
+    }
+  }, [recipientUpi]);
 
   const handlePayment = () => {
     setIsLoading(true);
@@ -25,10 +46,10 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
     const merchantName = "Cartopia";
     
     // Create UPI payment URI
-    const upiUrl = `upi://pay?pa=${recipientUpi}&pn=${merchantName}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+    const upiUrl = `upi://pay?pa=${defaultUpi}&pn=${merchantName}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
     
     // Create Google Pay deep link
-    const gpayUrl = `https://pay.google.com/gp/v/send?pa=${recipientUpi}&pn=${merchantName}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+    const gpayUrl = `https://pay.google.com/gp/v/send?pa=${defaultUpi}&pn=${merchantName}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
     
     // For mobile devices, try to open the Google Pay app
     // For desktop, show a QR code or instructions
@@ -42,8 +63,8 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
       }, 1000);
     } else {
       // For desktop users, provide UPI ID and instructions
-      navigator.clipboard.writeText(recipientUpi).then(() => {
-        toast.success("UPI ID copied to clipboard: " + recipientUpi);
+      navigator.clipboard.writeText(defaultUpi).then(() => {
+        toast.success("UPI ID copied to clipboard: " + defaultUpi);
         toast.info("Please use any UPI app to complete the payment of ₹" + amount);
         setIsLoading(false);
       });

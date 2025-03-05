@@ -1,5 +1,5 @@
 
-import { collection, getDocs, doc, getDoc, query, where, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, query, where, limit, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export interface Product {
@@ -60,6 +60,41 @@ export const fetchProductsByCategory = async (category: string): Promise<Product
   } catch (error) {
     console.error(`Error fetching products in category ${category}:`, error);
     return [];
+  }
+};
+
+export const addProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
+  try {
+    const productsCollection = collection(db, 'products');
+    const docRef = await addDoc(productsCollection, product);
+    
+    return {
+      id: docRef.id,
+      ...product
+    };
+  } catch (error) {
+    console.error('Error adding product:', error);
+    throw error;
+  }
+};
+
+export const updateProduct = async (productId: string, updates: Partial<Omit<Product, 'id'>>): Promise<void> => {
+  try {
+    const productDoc = doc(db, 'products', productId);
+    await updateDoc(productDoc, updates);
+  } catch (error) {
+    console.error(`Error updating product with ID ${productId}:`, error);
+    throw error;
+  }
+};
+
+export const deleteProduct = async (productId: string): Promise<void> => {
+  try {
+    const productDoc = doc(db, 'products', productId);
+    await deleteDoc(productDoc);
+  } catch (error) {
+    console.error(`Error deleting product with ID ${productId}:`, error);
+    throw error;
   }
 };
 
@@ -126,3 +161,4 @@ export const sampleProducts: Product[] = [
     stock: 9
   }
 ];
+

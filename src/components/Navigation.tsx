@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
-import { ShoppingCart, Menu, X, Home, Package } from 'lucide-react';
+import { ShoppingCart, Menu, X, Home, Package, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -58,6 +58,9 @@ const Navigation = () => {
             <NavLink to="/cart" active={location.pathname === "/cart"}>
               Cart
             </NavLink>
+            <NavLink to="/admin" active={location.pathname === "/admin"}>
+              Admin
+            </NavLink>
           </nav>
         )}
 
@@ -104,6 +107,9 @@ const Navigation = () => {
             </MobileNavLink>
             <MobileNavLink to="/cart" icon={<ShoppingCart className="w-4 h-4" />} active={location.pathname === "/cart"}>
               Cart {totalItems > 0 && `(${totalItems})`}
+            </MobileNavLink>
+            <MobileNavLink to="/admin" icon={<Settings className="w-4 h-4" />} active={location.pathname === "/admin"}>
+              Admin
             </MobileNavLink>
           </nav>
         </div>
