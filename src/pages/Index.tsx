@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchProducts, Product } from '@/services/productService';
@@ -25,11 +24,9 @@ export default function Index() {
   // Sync products with RTDB when products are loaded
   useEffect(() => {
     if (products && products.length > 0) {
-      // When products are loaded, provide them to the cart context
-      // The cart context will handle syncing when RTDB data changes
       syncWithRtdb(products, {});
     }
-  }, [products, syncWithRtdb]);
+  }, [products]); // Ensure syncWithRtdb is memoized in the context
 
   if (error) {
     toast.error('Failed to load products');
