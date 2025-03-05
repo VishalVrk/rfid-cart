@@ -1,4 +1,3 @@
-
 import { collection, getDocs, doc, getDoc, addDoc, deleteDoc, updateDoc, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -183,10 +182,20 @@ export const getPayments = async (status?: 'pending' | 'completed' | 'failed'): 
     
     const paymentsSnapshot = await getDocs(paymentsQuery);
     
-    return paymentsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    } as Payment));
+    return paymentsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        userId: data.userId,
+        amount: data.amount,
+        status: data.status,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        items: data.items,
+        transactionId: data.transactionId,
+        notes: data.notes
+      } as Payment;
+    });
   } catch (error) {
     console.error('Error fetching payments:', error);
     return [];
