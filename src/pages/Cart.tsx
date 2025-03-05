@@ -10,6 +10,7 @@ import GooglePayButton from '@/components/GooglePayButton';
 import Navigation from '@/components/Navigation';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { CustomBadge } from '@/components/ui/custom-badge';
 
 const Cart = () => {
   const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart, rtdbSynced } = useCart();
@@ -26,7 +27,7 @@ const Cart = () => {
               Back to Products
             </Link>
             
-            <Badge variant={rtdbSynced ? "success" : "outline"} className="flex items-center gap-1">
+            <CustomBadge variant={rtdbSynced ? "success" : "outline"} className="flex items-center gap-1">
               {rtdbSynced ? (
                 <>
                   <Check className="w-3 h-3" />
@@ -38,7 +39,7 @@ const Cart = () => {
                   <span>Waiting for RFID data</span>
                 </>
               )}
-            </Badge>
+            </CustomBadge>
           </div>
           
           <h1 className="text-3xl font-bold tracking-tight mb-8 bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">

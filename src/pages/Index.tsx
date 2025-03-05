@@ -1,13 +1,14 @@
 
 import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getProducts, Product } from '@/services/productService';
+import { fetchProducts, Product } from '@/services/productService';
 import { useCart } from '@/contexts/CartContext';
 import ProductCard from '@/components/ProductCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { CustomBadge } from '@/components/ui/custom-badge';
 import { Check, ShoppingCart, RefreshCw } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import { Link } from 'react-router-dom';
@@ -16,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function Index() {
   const { data: products, isLoading, error } = useQuery({
     queryKey: ['products'],
-    queryFn: getProducts,
+    queryFn: fetchProducts,
   });
 
   const { items, syncWithRtdb, rtdbSynced, totalItems } = useCart();
@@ -50,7 +51,7 @@ export default function Index() {
           </div>
 
           <div className="flex items-center space-x-4 mt-4 md:mt-0">
-            <Badge variant={rtdbSynced ? "success" : "outline"} className="flex items-center gap-1">
+            <CustomBadge variant={rtdbSynced ? "success" : "outline"} className="flex items-center gap-1">
               {rtdbSynced ? (
                 <>
                   <Check className="w-3 h-3" />
@@ -62,7 +63,7 @@ export default function Index() {
                   <span>Waiting for RFID data</span>
                 </>
               )}
-            </Badge>
+            </CustomBadge>
 
             <Link to="/cart">
               <Button variant="outline" className="relative">

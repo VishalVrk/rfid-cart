@@ -83,7 +83,9 @@ export const addPaymentAccount = async (account: Omit<PaymentAccount, 'id'>): Pr
     
     return {
       id: docRef.id,
-      ...account
+      name: account.name,
+      upiId: account.upiId,
+      isDefault: account.isDefault
     };
   } catch (error) {
     console.error('Error adding payment account:', error);

@@ -1,4 +1,3 @@
-
 import { collection, getDocs, doc, getDoc, query, where, limit, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -13,7 +12,8 @@ export interface Product {
   stock: number;
 }
 
-export const fetchProducts = async (): Promise<Product[]> => {
+// Renamed from fetchProducts to getProducts for compatibility with existing code
+export const getProducts = async (): Promise<Product[]> => {
   try {
     const productsCollection = collection(db, 'products');
     const productsSnapshot = await getDocs(productsCollection);
@@ -27,6 +27,9 @@ export const fetchProducts = async (): Promise<Product[]> => {
     return [];
   }
 };
+
+// Keep the original fetchProducts function for backward compatibility
+export const fetchProducts = getProducts;
 
 export const fetchProductById = async (productId: string): Promise<Product | null> => {
   try {
@@ -161,4 +164,3 @@ export const sampleProducts: Product[] = [
     stock: 9
   }
 ];
-
