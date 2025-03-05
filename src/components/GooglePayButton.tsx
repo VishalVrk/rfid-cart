@@ -46,7 +46,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
     const merchantName = "Cartopia";
     
     // Create UPI payment URI
-    const upiUrl = `upi://pay?pa=${defaultUpi}&pn=${merchantName}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+    const upiUrl = `upi://pay?pa=${defaultUpi}&pn=${encodeURIComponent(merchantName)}&mc=0000&tid=${Date.now()}&tr=${Date.now()}&tn=${encodeURIComponent(transactionNote)}&am=${amount}&cu=INR`;
     
     // Create Google Pay deep link
     const gpayUrl = `https://pay.google.com/gp/v/send?pa=${defaultUpi}&pn=${merchantName}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;

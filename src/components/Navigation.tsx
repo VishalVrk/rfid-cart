@@ -45,7 +45,7 @@ const Navigation = () => {
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           <span className="text-xl font-semibold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Cartopia
+            RFID CART
           </span>
         </Link>
 
@@ -57,9 +57,6 @@ const Navigation = () => {
             </NavLink>
             <NavLink to="/cart" active={location.pathname === "/cart"}>
               Cart
-            </NavLink>
-            <NavLink to="/admin" active={location.pathname === "/admin"}>
-              Admin
             </NavLink>
           </nav>
         )}
