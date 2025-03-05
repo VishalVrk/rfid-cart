@@ -61,7 +61,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, className, style }) 
       </CardContent>
       
       <CardFooter className="p-4 pt-0 flex items-center justify-between">
-        <div className="text-lg font-semibold">${product.price.toFixed(2)}</div>
+        <div className="text-lg font-semibold">Rs {product.price.toFixed(2)}</div>
         <Button 
           onClick={handleAddToCart}
           variant={isInCart ? "secondary" : "default"}

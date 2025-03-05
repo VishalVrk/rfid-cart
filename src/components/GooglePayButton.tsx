@@ -33,7 +33,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
     // For mobile devices, try to open the Google Pay app
     // For desktop, show a QR code or instructions
     if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      window.location.href = gpayUrl;
+      window.location.href = upiUrl;
       
       // Reset loading after a delay
       setTimeout(() => {

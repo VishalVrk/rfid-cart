@@ -4,12 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD0OiEoXMYD9-xxPZRcV1KM2kzK_fQszHw",
-  authDomain: "cartopia-app.firebaseapp.com",
-  projectId: "cartopia-app",
-  storageBucket: "cartopia-app.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abcdef123456789012345"
+  apiKey: "AIzaSyAKjmpwR0ARA9YgmDFL_BM0aP2B62TvUsw",
+  authDomain: "rfid-cart.firebaseapp.com",
+  projectId: "rfid-cart",
+  storageBucket: "rfid-cart.firebasestorage.app",
+  messagingSenderId: "986096730912",
+  appId: "1:986096730912:web:e8644f7343a2159c338d45",
+  measurementId: "G-FGEKX8KSB2"
 };
 
 // Initialize Firebase
