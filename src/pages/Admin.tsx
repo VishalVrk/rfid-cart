@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Product, fetchProducts, addProduct, deleteProduct } from '@/services/productService';
 import { getPaymentAccounts, addPaymentAccount, deletePaymentAccount, PaymentAccount } from '@/services/paymentService';
+import PaymentManagement from '@/components/PaymentManagement';
 
 const Admin = () => {
   const queryClient = useQueryClient();
@@ -161,6 +162,11 @@ const Admin = () => {
               </>
             )}
           </Button>
+        </div>
+
+        {/* Payment Management Section */}
+        <div className="mb-8">
+          <PaymentManagement />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

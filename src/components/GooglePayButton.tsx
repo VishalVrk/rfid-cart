@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { getDefaultPaymentAccount } from '@/services/paymentService';
+import { createPayment, getDefaultPaymentAccount } from '@/services/paymentService';
+import { useNavigate } from 'react-router-dom';
 
 interface GooglePayButtonProps {
   className?: string;
@@ -15,9 +16,10 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
   className,
   recipientUpi
 }) => {
-  const { totalPrice, clearCart } = useCart();
+  const { totalPrice, items, clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [defaultUpi, setDefaultUpi] = useState(recipientUpi || "vishalvrk97@okhdfcbank");
+  const navigate = useNavigate();
   
   // Fetch default UPI ID if not provided
   useEffect(() => {
@@ -37,44 +39,71 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
     }
   }, [recipientUpi]);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     setIsLoading(true);
     
-    // Construct UPI payment URL
-    const amount = totalPrice.toFixed(2);
-    const transactionNote = "Payment for Cartopia order";
-    const merchantName = "Cartopia";
-    
-    // Create UPI payment URI
-    const upiUrl = `upi://pay?pa=${defaultUpi}&pn=${encodeURIComponent(merchantName)}&mc=0000&tid=${Date.now()}&tr=${Date.now()}&tn=${encodeURIComponent(transactionNote)}&am=${amount}&cu=INR`;
-    
-    // Create Google Pay deep link
-    const gpayUrl = `https://pay.google.com/gp/v/send?pa=${defaultUpi}&pn=${merchantName}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
-    
-    // For mobile devices, try to open the Google Pay app
-    // For desktop, show a QR code or instructions
-    if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      window.location.href = upiUrl;
+    try {
+      // Create a payment record in Firebase
+      const paymentData = {
+        userId: 'anonymous', // Replace with actual user ID if authentication is implemented
+        amount: totalPrice,
+        status: 'pending' as const,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
+        transactionId: `TX${Date.now()}${Math.floor(Math.random() * 1000)}`
+      };
       
-      // Reset loading after a delay
+      const payment = await createPayment(paymentData);
+      
+      // Construct UPI payment URL
+      const amount = totalPrice.toFixed(2);
+      const transactionNote = `Payment for Cartopia order #${payment.id}`;
+      const merchantName = "Cartopia";
+      
+      // Create UPI payment URI
+      const upiUrl = `upi://pay?pa=${defaultUpi}&pn=${encodeURIComponent(merchantName)}&mc=0000&tid=${payment.transactionId}&tr=${payment.id}&tn=${encodeURIComponent(transactionNote)}&am=${amount}&cu=INR`;
+      
+      // Create Google Pay deep link
+      const gpayUrl = `https://pay.google.com/gp/v/send?pa=${defaultUpi}&pn=${merchantName}&am=${amount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+      
+      // For mobile devices, try to open the Google Pay app
+      // For desktop, show a QR code or instructions
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        window.location.href = upiUrl;
+        
+        // Reset loading after a delay
+        setTimeout(() => {
+          setIsLoading(false);
+          toast.info("Payment initiated. Please complete the transaction in Google Pay.");
+        }, 1000);
+      } else {
+        // For desktop users, provide UPI ID and instructions
+        navigator.clipboard.writeText(defaultUpi).then(() => {
+          toast.success("UPI ID copied to clipboard: " + defaultUpi);
+          toast.info("Please use any UPI app to complete the payment of ₹" + amount);
+          setIsLoading(false);
+        });
+      }
+      
+      // Notify user to wait for payment confirmation
+      toast.info("Your payment will be confirmed by the admin shortly.");
+      
+      // Clear cart and redirect to home page after a delay
       setTimeout(() => {
-        setIsLoading(false);
-        toast.info("Payment initiated. Please complete the transaction in Google Pay.");
-      }, 1000);
-    } else {
-      // For desktop users, provide UPI ID and instructions
-      navigator.clipboard.writeText(defaultUpi).then(() => {
-        toast.success("UPI ID copied to clipboard: " + defaultUpi);
-        toast.info("Please use any UPI app to complete the payment of ₹" + amount);
-        setIsLoading(false);
-      });
+        clearCart();
+        navigate('/', { state: { paymentId: payment.id } });
+      }, 5000);
+    } catch (error) {
+      console.error("Error initiating payment:", error);
+      toast.error("Failed to initiate payment. Please try again.");
+      setIsLoading(false);
     }
-    
-    // Simulate successful payment after a delay (in a real app, you'd wait for a webhook callback)
-    setTimeout(() => {
-      toast.success("Payment successful! Thank you for your order.");
-      clearCart();
-    }, 5000);
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import { collection, getDocs, doc, getDoc, addDoc, deleteDoc, updateDoc, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -7,6 +6,23 @@ export interface PaymentAccount {
   name: string;
   upiId: string;
   isDefault: boolean;
+}
+
+export interface Payment {
+  id: string;
+  userId: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'failed';
+  createdAt: number;
+  updatedAt: number;
+  items: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }[];
+  transactionId?: string;
+  notes?: string;
 }
 
 export const getPaymentAccounts = async (): Promise<PaymentAccount[]> => {
@@ -50,7 +66,6 @@ export const addPaymentAccount = async (account: Omit<PaymentAccount, 'id'>): Pr
     const batch = writeBatch(db);
     const accountsCollection = collection(db, 'paymentAccounts');
     
-    // If this account is being set as default, unset any existing default accounts
     if (account.isDefault) {
       const defaultAccountsQuery = query(accountsCollection, where('isDefault', '==', true));
       const defaultAccountsSnapshot = await getDocs(defaultAccountsQuery);
@@ -62,10 +77,8 @@ export const addPaymentAccount = async (account: Omit<PaymentAccount, 'id'>): Pr
       });
     }
     
-    // Add the new account
     const docRef = await addDoc(accountsCollection, account);
     
-    // Commit the batch
     await batch.commit();
     
     return {
@@ -83,7 +96,6 @@ export const updatePaymentAccount = async (accountId: string, updates: Partial<O
     const batch = writeBatch(db);
     const accountsCollection = collection(db, 'paymentAccounts');
     
-    // If this account is being set as default, unset any existing default accounts
     if (updates.isDefault) {
       const defaultAccountsQuery = query(accountsCollection, where('isDefault', '==', true));
       const defaultAccountsSnapshot = await getDocs(defaultAccountsQuery);
@@ -97,10 +109,8 @@ export const updatePaymentAccount = async (accountId: string, updates: Partial<O
       });
     }
     
-    // Update the account
     batch.update(doc(db, 'paymentAccounts', accountId), updates);
     
-    // Commit the batch
     await batch.commit();
   } catch (error) {
     console.error(`Error updating payment account with ID ${accountId}:`, error);
@@ -114,13 +124,11 @@ export const deletePaymentAccount = async (accountId: string): Promise<void> => 
     const accountSnapshot = await getDoc(accountDoc);
     
     if (accountSnapshot.exists() && accountSnapshot.data().isDefault) {
-      // If deleting a default account, try to set another account as default
       const accountsCollection = collection(db, 'paymentAccounts');
       const accountsQuery = query(accountsCollection);
       const accountsSnapshot = await getDocs(accountsQuery);
       
       if (accountsSnapshot.size > 1) {
-        // Find another account that is not the one being deleted
         const anotherAccount = accountsSnapshot.docs.find(doc => doc.id !== accountId);
         if (anotherAccount) {
           await updateDoc(doc(db, 'paymentAccounts', anotherAccount.id), {
@@ -137,7 +145,58 @@ export const deletePaymentAccount = async (accountId: string): Promise<void> => 
   }
 };
 
-// Default account for development (will be removed in production)
+export const createPayment = async (payment: Omit<Payment, 'id'>): Promise<Payment> => {
+  try {
+    const paymentsCollection = collection(db, 'payments');
+    const docRef = await addDoc(paymentsCollection, payment);
+    
+    return {
+      id: docRef.id,
+      ...payment
+    };
+  } catch (error) {
+    console.error('Error creating payment:', error);
+    throw error;
+  }
+};
+
+export const getPayments = async (status?: 'pending' | 'completed' | 'failed'): Promise<Payment[]> => {
+  try {
+    const paymentsCollection = collection(db, 'payments');
+    let paymentsQuery;
+    
+    if (status) {
+      paymentsQuery = query(paymentsCollection, where('status', '==', status));
+    } else {
+      paymentsQuery = query(paymentsCollection);
+    }
+    
+    const paymentsSnapshot = await getDocs(paymentsQuery);
+    
+    return paymentsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as Payment));
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    return [];
+  }
+};
+
+export const updatePaymentStatus = async (paymentId: string, status: 'pending' | 'completed' | 'failed', notes?: string): Promise<void> => {
+  try {
+    const paymentDoc = doc(db, 'payments', paymentId);
+    await updateDoc(paymentDoc, {
+      status,
+      updatedAt: Date.now(),
+      ...(notes ? { notes } : {})
+    });
+  } catch (error) {
+    console.error(`Error updating payment status for ID ${paymentId}:`, error);
+    throw error;
+  }
+};
+
 export const defaultAccount: PaymentAccount = {
   id: 'default',
   name: 'Default Business Account',
