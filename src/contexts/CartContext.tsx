@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+
+import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import { Product } from '@/services/productService';
 import { toast } from 'sonner';
+import { listenToSmartTrolley, RtdbCartData, updateTotalPrice, shouldProductBeInCart, getProductQuantityFromRtdb } from '@/services/rtdbService';
 
 // Define cart item type
 export interface CartItem extends Product {
@@ -12,6 +14,7 @@ interface CartState {
   items: CartItem[];
   totalItems: number;
   totalPrice: number;
+  rtdbSynced: boolean;
 }
 
 // Define cart actions
@@ -19,13 +22,15 @@ type CartAction =
   | { type: 'ADD_ITEM'; payload: Product }
   | { type: 'REMOVE_ITEM'; payload: string }
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
-  | { type: 'CLEAR_CART' };
+  | { type: 'CLEAR_CART' }
+  | { type: 'SYNC_WITH_RTDB'; payload: { products: Product[]; rtdbData: RtdbCartData } };
 
 // Create initial state
 const initialState: CartState = {
   items: [],
   totalItems: 0,
   totalPrice: 0,
+  rtdbSynced: false,
 };
 
 // Create reducer function
@@ -112,7 +117,40 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     }
     
     case 'CLEAR_CART':
-      return initialState;
+      return {
+        ...initialState,
+        rtdbSynced: state.rtdbSynced,
+      };
+    
+    case 'SYNC_WITH_RTDB': {
+      const { products, rtdbData } = action.payload;
+      let newItems: CartItem[] = [];
+      let newTotalItems = 0;
+      let newTotalPrice = 0;
+      
+      // Add products based on RFID data
+      products.forEach(product => {
+        const productName = product.name.toLowerCase();
+        if (shouldProductBeInCart(productName, rtdbData)) {
+          const quantity = getProductQuantityFromRtdb(productName, rtdbData);
+          if (quantity > 0) {
+            newItems.push({
+              ...product,
+              quantity
+            });
+            newTotalItems += quantity;
+            newTotalPrice += product.price * quantity;
+          }
+        }
+      });
+      
+      return {
+        items: newItems,
+        totalItems: newTotalItems,
+        totalPrice: newTotalPrice,
+        rtdbSynced: true,
+      };
+    }
       
     default:
       return state;
@@ -125,6 +163,7 @@ interface CartContextType extends CartState {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  syncWithRtdb: (products: Product[], rtdbData: RtdbCartData) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -135,15 +174,39 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Load cart from localStorage if available
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem('cart');
-      return savedCart ? JSON.parse(savedCart) : initialState;
+      return savedCart ? { ...JSON.parse(savedCart), rtdbSynced: false } : initialState;
     }
     return initialState;
   });
   
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [rtdbData, setRtdbData] = useState<RtdbCartData>({});
+  
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(state));
-  }, [state]);
+    
+    // Update total price in RTDB when cart changes and we have rtdb data
+    if (state.rtdbSynced && Object.keys(rtdbData).length > 0) {
+      updateTotalPrice(state.totalPrice);
+    }
+  }, [state, rtdbData]);
+  
+  // Listen to RTDB updates
+  useEffect(() => {
+    const unsubscribe = listenToSmartTrolley((data) => {
+      setRtdbData(data);
+      
+      // If we have products and RTDB data, sync the cart
+      if (allProducts.length > 0) {
+        syncWithRtdb(allProducts, data);
+      }
+    });
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [allProducts]);
   
   // Action creators
   const addItem = (product: Product) => {
@@ -165,6 +228,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.success('Cart cleared');
   };
   
+  const syncWithRtdb = (products: Product[], rtdbData: RtdbCartData) => {
+    setAllProducts(products);
+    dispatch({ 
+      type: 'SYNC_WITH_RTDB', 
+      payload: { 
+        products, 
+        rtdbData 
+      } 
+    });
+  };
+  
   return (
     <CartContext.Provider
       value={{
@@ -173,6 +247,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeItem,
         updateQuantity,
         clearCart,
+        syncWithRtdb,
       }}
     >
       {children}

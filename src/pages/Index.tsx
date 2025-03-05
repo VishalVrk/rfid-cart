@@ -1,112 +1,118 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+
+import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import Layout from '@/components/Layout';
+import { getProducts, Product } from '@/services/productService';
+import { useCart } from '@/contexts/CartContext';
 import ProductCard from '@/components/ProductCard';
-import { fetchProducts } from '@/services/productService';
-import PaymentStatus from '@/components/PaymentStatus';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Check, ShoppingCart, RefreshCw } from 'lucide-react';
+import Navigation from '@/components/Navigation';
+import { Link } from 'react-router-dom';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const Index = () => {
-  const location = useLocation();
-  const [paymentId, setPaymentId] = useState<string | null>(null);
-  const [showPaymentStatus, setShowPaymentStatus] = useState(false);
-
-  useEffect(() => {
-    // Check if we have a payment ID in the location state (redirected from cart)
-    if (location.state && location.state.paymentId) {
-      setPaymentId(location.state.paymentId);
-      setShowPaymentStatus(true);
-      
-      // Clear the state after 1 minute
-      const timer = setTimeout(() => {
-        setShowPaymentStatus(false);
-      }, 60000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [location]);
-
-  const { data: products = [], isLoading, error } = useQuery({
+export default function Index() {
+  const { data: products, isLoading, error } = useQuery({
     queryKey: ['products'],
-    queryFn: fetchProducts
+    queryFn: getProducts,
   });
 
-  const handlePaymentComplete = () => {
-    // After successful payment, we can keep the status visible for a bit longer
-    setTimeout(() => {
-      setShowPaymentStatus(false);
-    }, 5000);
-  };
+  const { items, syncWithRtdb, rtdbSynced, totalItems } = useCart();
 
-  // Group products by category
-  const productsByCategory = products.reduce((acc, product) => {
-    const category = product.category || 'Uncategorized';
-    if (!acc[category]) {
-      acc[category] = [];
+  // Sync products with RTDB when products are loaded
+  useEffect(() => {
+    if (products && products.length > 0) {
+      // When products are loaded, provide them to the cart context
+      // The cart context will handle syncing when RTDB data changes
+      syncWithRtdb(products, {});
     }
-    acc[category].push(product);
-    return acc;
-  }, {} as Record<string, typeof products>);
-
-  // Sort categories alphabetically
-  const sortedCategories = Object.keys(productsByCategory).sort();
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  }, [products, syncWithRtdb]);
 
   if (error) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-8">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <strong className="font-bold">Error!</strong>
-            <span className="block sm:inline"> Failed to load products. Please try again later.</span>
-          </div>
-        </div>
-      </Layout>
-    );
+    toast.error('Failed to load products');
   }
 
   return (
-    <Layout>
-      <div className="container mx-auto px-4 py-8">
-        {showPaymentStatus && paymentId && (
-          <div className="mb-8">
-            <PaymentStatus paymentId={paymentId} onComplete={handlePaymentComplete} />
+    <div className="min-h-screen">
+      <Navigation />
+
+      <main className="container mx-auto px-4 pt-20 pb-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+              Smart Trolley Shop
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 max-w-xl">
+              Add products to your cart or scan items using RFID tags. Your cart will be updated automatically.
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-4 mt-4 md:mt-0">
+            <Badge variant={rtdbSynced ? "success" : "outline"} className="flex items-center gap-1">
+              {rtdbSynced ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  <span>Synced with RFID</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  <span>Waiting for RFID data</span>
+                </>
+              )}
+            </Badge>
+
+            <Link to="/cart">
+              <Button variant="outline" className="relative">
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                <span>Cart</span>
+                {totalItems > 0 && (
+                  <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center">
+                    {totalItems}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row gap-4 max-w-full">
+            <Input
+              placeholder="Search products..."
+              className="max-w-md"
+            />
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array(8).fill(0).map((_, index) => (
+              <div key={index} className="h-[350px] rounded-xl overflow-hidden">
+                <Skeleton className="h-full w-full" />
+              </div>
+            ))}
+          </div>
+        ) : products && products.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {products.map((product, index) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                className="animate-slide-up"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-medium text-gray-900 dark:text-white mb-2">No products found</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-8">Try checking back later or contact the administrator</p>
           </div>
         )}
-
-        <h1 className="text-3xl font-bold mb-8">Latest Products</h1>
-        
-        {sortedCategories.map((category) => (
-          <div key={category} className="mb-12">
-            <h2 className="text-2xl font-semibold mb-4 pb-2 border-b">{category}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {productsByCategory[category].map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {products.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No products available at the moment.</p>
-          </div>
-        )}
-      </div>
-    </Layout>
+      </main>
+    </div>
   );
-};
-
-export default Index;
+}

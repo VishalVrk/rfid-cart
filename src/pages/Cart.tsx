@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useCart } from '@/contexts/CartContext';
-import { MinusCircle, PlusCircle, Trash2, ShoppingCart, ArrowLeft, ChevronRight } from 'lucide-react';
+import { MinusCircle, PlusCircle, Trash2, ShoppingCart, ArrowLeft, ChevronRight, RefreshCw, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -9,9 +9,10 @@ import { Link } from 'react-router-dom';
 import GooglePayButton from '@/components/GooglePayButton';
 import Navigation from '@/components/Navigation';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const Cart = () => {
-  const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart } = useCart();
+  const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart, rtdbSynced } = useCart();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -19,11 +20,25 @@ const Cart = () => {
       
       <main className="flex-1 container mx-auto px-4 pt-20 pb-10">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center mb-8">
+          <div className="flex items-center justify-between mb-8">
             <Link to="/" className="text-sm text-gray-500 hover:text-gray-700 flex items-center">
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back to Products
             </Link>
+            
+            <Badge variant={rtdbSynced ? "success" : "outline"} className="flex items-center gap-1">
+              {rtdbSynced ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  <span>Synced with RFID</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  <span>Waiting for RFID data</span>
+                </>
+              )}
+            </Badge>
           </div>
           
           <h1 className="text-3xl font-bold tracking-tight mb-8 bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
@@ -61,9 +76,10 @@ const Cart = () => {
                           <div className="flex items-center mt-2 md:mt-0">
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              disabled={item.quantity <= 1}
+                              disabled={item.quantity <= 1 || rtdbSynced}
                               className="text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed p-1"
                               aria-label="Decrease quantity"
+                              title={rtdbSynced ? "Cart is synced with RFID" : "Decrease quantity"}
                             >
                               <MinusCircle className="w-5 h-5" />
                             </button>
@@ -72,17 +88,20 @@ const Cart = () => {
                             
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              disabled={item.quantity >= item.stock}
+                              disabled={item.quantity >= item.stock || rtdbSynced}
                               className="text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed p-1"
                               aria-label="Increase quantity"
+                              title={rtdbSynced ? "Cart is synced with RFID" : "Increase quantity"}
                             >
                               <PlusCircle className="w-5 h-5" />
                             </button>
                             
                             <button
                               onClick={() => removeItem(item.id)}
-                              className="ml-4 text-red-500 hover:text-red-700 p-1"
+                              disabled={rtdbSynced}
+                              className="ml-4 text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed p-1"
                               aria-label="Remove item"
+                              title={rtdbSynced ? "Cart is synced with RFID" : "Remove item"}
                             >
                               <Trash2 className="w-5 h-5" />
                             </button>
@@ -107,7 +126,9 @@ const Cart = () => {
                     variant="outline"
                     size="sm"
                     onClick={clearCart}
-                    className="text-xs text-red-500 hover:bg-red-50 hover:text-red-600 border-red-200"
+                    disabled={rtdbSynced}
+                    className="text-xs text-red-500 hover:bg-red-50 hover:text-red-600 border-red-200 disabled:opacity-50"
+                    title={rtdbSynced ? "Cart is synced with RFID" : "Clear cart"}
                   >
                     <Trash2 className="w-3 h-3 mr-1" />
                     Clear Cart
