@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { Product } from '@/services/productService';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 // Define cart item type
 export interface CartItem extends Product {

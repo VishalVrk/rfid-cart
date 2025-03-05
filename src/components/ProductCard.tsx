@@ -10,9 +10,10 @@ import { cn } from '@/lib/utils';
 interface ProductCardProps {
   product: Product;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, className }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, className, style }) => {
   const { addItem, items } = useCart();
   const isInCart = items.some(item => item.id === product.id);
 
@@ -26,6 +27,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, className }) => {
         "product-card overflow-hidden border-0 bg-white dark:bg-gray-900 rounded-xl shadow-sm h-full",
         className
       )}
+      style={style}
     >
       <div className="aspect-square relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent z-10" />

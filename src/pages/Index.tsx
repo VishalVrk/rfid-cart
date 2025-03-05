@@ -9,7 +9,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Search, Filter, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import Navigation from '@/components/Navigation';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
