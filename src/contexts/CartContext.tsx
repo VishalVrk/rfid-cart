@@ -2,7 +2,17 @@
 import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import { Product } from '@/services/productService';
 import { toast } from 'sonner';
-import { listenToSmartTrolley, RtdbCartData, updateTotalPrice, shouldProductBeInCart, getProductQuantityFromRtdb } from '@/services/rtdbService';
+import { 
+  listenToSmartTrolley, 
+  RtdbCartData, 
+  updateTotalPrice, 
+  shouldProductBeInCart, 
+  getProductQuantityFromRtdb,
+  updateProductInCart,
+  removeProductFromCart,
+  clearCart as clearRtdbCart,
+  updateCartTotalPrice
+} from '@/services/rtdbService';
 
 // Define cart item type
 export interface CartItem extends Product {
@@ -44,9 +54,14 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       if (existingItemIndex !== -1) {
         // Item already exists, increase quantity
         const updatedItems = [...state.items];
+        const newQuantity = updatedItems[existingItemIndex].quantity + 1;
+        
+        // Update RTDB for this specific product
+        updateProductInCart(action.payload.name.toLowerCase(), newQuantity);
+
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + 1,
+          quantity: newQuantity,
         };
 
         return {
@@ -59,6 +74,9 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         // Add new item with quantity 1
         const newItem: CartItem = { ...action.payload, quantity: 1 };
         
+        // Update RTDB for this new product
+        updateProductInCart(newItem.name.toLowerCase(), 1);
+
         return {
           ...state,
           items: [...state.items, newItem],
@@ -72,6 +90,9 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       const existingItem = state.items.find(item => item.id === action.payload);
       
       if (!existingItem) return state;
+      
+      // Remove from RTDB
+      removeProductFromCart(existingItem.name.toLowerCase());
       
       const filteredItems = state.items.filter(item => item.id !== action.payload);
       
@@ -94,6 +115,8 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       
       if (quantity <= 0) {
         // Remove item if quantity is 0 or negative
+        removeProductFromCart(item.name.toLowerCase());
+        
         const filteredItems = state.items.filter(item => item.id !== id);
         
         return {
@@ -103,6 +126,9 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           totalPrice: state.totalPrice - (item.price * item.quantity),
         };
       }
+      
+      // Update RTDB for this product
+      updateProductInCart(item.name.toLowerCase(), quantity);
       
       // Update item quantity
       const updatedItems = [...state.items];
@@ -116,11 +142,15 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       };
     }
     
-    case 'CLEAR_CART':
+    case 'CLEAR_CART': {
+      // Clear RTDB cart
+      clearRtdbCart();
+      
       return {
         ...initialState,
         rtdbSynced: state.rtdbSynced,
       };
+    }
     
     case 'SYNC_WITH_RTDB': {
       const { products, rtdbData } = action.payload;
@@ -185,12 +215,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(state));
-    
-    // Update total price in RTDB when cart changes and we have rtdb data
-    if (state.rtdbSynced && Object.keys(rtdbData).length > 0) {
-      updateTotalPrice(state.totalPrice);
+    if (state.totalPrice > 0) {
+      updateCartTotalPrice(state.totalPrice);
     }
-  }, [state, rtdbData]);
+  }, [state]);
   
   // Listen to RTDB updates
   useEffect(() => {
