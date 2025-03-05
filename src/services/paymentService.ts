@@ -1,3 +1,4 @@
+
 import { collection, getDocs, doc, getDoc, addDoc, deleteDoc, updateDoc, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -154,7 +155,14 @@ export const createPayment = async (payment: Omit<Payment, 'id'>): Promise<Payme
     
     return {
       id: docRef.id,
-      ...payment
+      userId: payment.userId,
+      amount: payment.amount,
+      status: payment.status,
+      createdAt: payment.createdAt,
+      updatedAt: payment.updatedAt,
+      items: payment.items,
+      transactionId: payment.transactionId,
+      notes: payment.notes
     };
   } catch (error) {
     console.error('Error creating payment:', error);
